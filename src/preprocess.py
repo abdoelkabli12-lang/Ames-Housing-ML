@@ -21,13 +21,9 @@ class CleanData:
         'LandSlope',
         'LotConfig',
         'MiscVal',
-        '3SsnPorch',
         'LowQualFinSF',
-        'BsmtHalfBath',
         'BsmtFinSF2',
-        'EnclosedPorch',
         'KitchenAbvGr',
-        'ScreenPorch',
         ], axis=1)
     
     # Duplicates
