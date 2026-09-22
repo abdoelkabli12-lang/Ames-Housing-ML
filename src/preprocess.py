@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 class CleanData:
   def __init__(self):
@@ -8,25 +10,25 @@ class CleanData:
     
   def clean(self):
     df = self.data.drop(['Id',
-'PoolQC',
-'MiscFeature',
-'Alley',
-'Fence',
-'FireplaceQu',
-'Utilities',
-'Condition2',
-'RoofMatl',
-'LandSlope',
-'LotConfig',
-'MiscVal',
-'3SsnPorch',
-'LowQualFinSF',
-'BsmtHalfBath',
-'BsmtFinSF2',
-'EnclosedPorch',
-'KitchenAbvGr',
-'ScreenPorch',
-], axis=1)
+        'PoolQC',
+        'MiscFeature',
+        'Alley',
+        'Fence',
+        'FireplaceQu',
+        'Utilities',
+        'Condition2',
+        'RoofMatl',
+        'LandSlope',
+        'LotConfig',
+        'MiscVal',
+        '3SsnPorch',
+        'LowQualFinSF',
+        'BsmtHalfBath',
+        'BsmtFinSF2',
+        'EnclosedPorch',
+        'KitchenAbvGr',
+        'ScreenPorch',
+        ], axis=1)
     
     # Duplicates
     dup = df.duplicated().sum()
@@ -76,3 +78,12 @@ class CleanData:
     self.clean_df = df
     return df
   
+
+    
+
+x = CleanData()
+x.clean()
+
+
+
+

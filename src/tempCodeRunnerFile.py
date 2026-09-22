@@ -1,0 +1,7 @@
+print(analyze_target(x))
+print(analyze_correlations(x))
+print(analyze_categoricals_low_card(x))
+print(analyze_categoricals_high_card(x))
+print(detect_target_outliers(x))
+print(plot_feature_scatter_outliers(x))
+print(plot_additional_feature_scatter(x))
