@@ -280,6 +280,7 @@ def final_data_check(df):
 
     return df.shape, len(missing), df.columns.tolist()
 
+
 x = cl().clean()
 
 
