@@ -94,13 +94,6 @@ def analyze_correlations(df, target='SalePrice', top_n=20, plot=True):
 # ── Section 5: Categorical — Low Cardinality ────────────────────────────────
 
 def analyze_categoricals_low_card(df, max_unique=15, target='SalePrice'):
-    """For categorical columns with <= max_unique values, show mean/median/count of target by category.
-
-    Args:
-        df: DataFrame
-        max_unique: maximum unique values to include (default 15)
-        target: target variable to aggregate (default 'SalePrice')
-    """
     cat_cols = df.select_dtypes(include=['object']).columns.tolist()
     low_card = [c for c in cat_cols if df[c].nunique() <= max_unique]
 
@@ -200,13 +193,6 @@ def detect_target_outliers(df, target='SalePrice', log_target='LogSalePrice'):
 # ── Section 8: Outlier Detection — Feature Scatter Plots ────────────────────
 
 def plot_feature_scatter_outliers(df, target='SalePrice', features=None):
-    """Scatter plots of key features vs target for visual outlier inspection.
-
-    Args:
-        df: DataFrame
-        target: target column (default 'SalePrice')
-        features: list of features to plot. If None, uses defaults.
-    """
     if features is None:
         features = [
             'GrLivArea', 'LotArea', 'TotalBsmtSF',
@@ -243,13 +229,6 @@ def plot_feature_scatter_outliers(df, target='SalePrice', features=None):
 # ── Section 9: Additional Feature Scatter Plots ─────────────────────────────
 
 def plot_additional_feature_scatter(df, target='SalePrice', features=None):
-    """Additional scatter plots for features that might have extreme values.
-
-    Args:
-        df: DataFrame
-        target: target column
-        features: list of features to plot. If None, uses defaults.
-    """
     if features is None:
         features = [
             'LotFrontage', '1stFlrSF', '2ndFlrSF',
@@ -272,13 +251,6 @@ def plot_additional_feature_scatter(df, target='SalePrice', features=None):
 # ── Section 10: Outlier Decision Summary ────────────────────────────────────
 
 def create_outlier_decision_table():
-    """Return an empty DataFrame template for documenting outlier decisions.
-
-    Fill in manually after reviewing all plots and statistics.
-
-    Returns:
-        DataFrame with columns: Feature, Issue, Count, Decision, Action
-    """
     columns = ['Feature', 'Issue', 'Count', 'Decision', 'Action']
     return pd.DataFrame(columns=columns)
 
@@ -286,11 +258,6 @@ def create_outlier_decision_table():
 # ── Section 12: Final Data Check ────────────────────────────────────────────
 
 def final_data_check(df):
-    """Print final data quality summary.
-
-    Returns:
-        tuple: (shape, missing_count, column_list)
-    """
     print("=== Final Data Check ===")
     print(f"Shape: {df.shape}")
     print(f"Rows: {df.shape[0]}  |  Columns: {df.shape[1]}")

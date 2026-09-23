@@ -6,19 +6,21 @@ import numpy as np
 
 def add_numeric_features(df):
     df['TotalSF'] = df['TotalBsmtSF'] + df['1stFlrSF'] + df['2ndFlrSF']
-    df['Age'] = 2025 - df['YearBuilt']
-    df['RemodAge'] = 2025 - df['YearRemodAdd']
-    df['TotalBath'] = (df['FullBath'] +
-                       0.5 * df['HalfBath'] +
-                       df['BsmtFullBath'] +
-                       0.5 * df['BsmtHalfBath'])
-    df['TotalPorchSF'] = (df['OpenPorchSF'] +
-                           df['EnclosedPorch'] +
-                           df['3SsnPorch'] +
-                           df['ScreenPorch'])
+    
+    df['Age'] = 2026 - df['YearBuilt']
+    
+    df['RemodAge'] = 2026 - df['YearRemodAdd']
+    
+    df['TotalBath'] = (df['FullBath'] + 0.5 * df['HalfBath'] + df['BsmtFullBath'] + 0.5 * df['BsmtHalfBath'])
+    
+    df['TotalPorchSF'] = (df['OpenPorchSF'] + df['EnclosedPorch'] + df['3SsnPorch'] + df['ScreenPorch'])
+    
     df['IsNew'] = (df['YearBuilt'] == df['YrSold']).astype(int)
+    
     df['HasPool'] = (df['PoolArea'] > 0).astype(int)
+    
     df['HasMasonryVeneer'] = (df['MasVnrType'] != 'None').astype(int)
+    
     return df
 
 
@@ -69,6 +71,22 @@ def encode_nominal_features(df, nominal_cols=None, drop_first=False):
 
     df = pd.get_dummies(df, columns=nominal_cols, drop_first=drop_first, dtype=int)
 
+    return df
+
+
+
+def handle_outliers(df, grlivarea_threshold=3500, price_threshold=300000, quality_threshold=4, id_col='Id'):
+    if id_col not in df.columns:
+        return df
+    
+    outliers = df[(df['GrLivArea'] > grlivarea_threshold) & (df['SalePrice'] < price_threshold)]
+    
+    to_delete = outliers[outliers['OverallQual'] <= quality_threshold]
+    
+    if len(to_delete) > 0:
+        df = df[~df[id_col].isin(to_delete[id_col])]
+        print(f"Removed {len(to_delete)} outlier houses (IDs: {to_delete[id_col].tolist()})")
+    
     return df
 
 

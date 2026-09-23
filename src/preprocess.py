@@ -9,7 +9,7 @@ class CleanData:
     self.clean()
     
   def clean(self):
-    df = self.data.drop(['Id',
+    df = self.data.drop([
         'PoolQC',
         'MiscFeature',
         'Alley',
