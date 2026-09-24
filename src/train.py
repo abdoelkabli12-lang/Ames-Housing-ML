@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 
 
@@ -71,7 +72,7 @@ preprocessor = ColumnTransformer(
 )
 
 lr_pipeline = Pipeline(steps = [('preprocessor', preprocessor),
-                       ('regression', LinearRegression())])
+                       ('regressor', LinearRegression())])
 
 print('Training Linear Regression on LogSalePrice...')
 lr_pipeline.fit(X_train, y_train_log)
@@ -108,14 +109,11 @@ rf_pipeline = Pipeline(steps=[
     ))
 ])
 
-# Train on raw SalePrice
 print('Training Random Forest on SalePrice...')
 rf_pipeline.fit(X_train, y_train_raw)
 
-# Predict
 y_pred_rf = rf_pipeline.predict(X_test)
 
-# Evaluate
 rf_mae = mean_absolute_error(y_test_raw, y_pred_rf)
 rf_rmse = np.sqrt(mean_squared_error(y_test_raw, y_pred_rf))
 rf_r2 = r2_score(y_test_raw, y_pred_rf)
@@ -125,14 +123,12 @@ print(f'MAE:  ${rf_mae:>10,.0f}')
 print(f'RMSE: ${rf_rmse:>10,.0f}')
 print(f'R²:   {rf_r2:>10.4f}')
 
-# Store for comparison
 rf_results = {'Model': 'Random Forest', 'MAE': rf_mae, 'RMSE': rf_rmse, 'R²': rf_r2}
 
 
 
 
 
-# Build the full pipeline: preprocessor + XGBoost
 xgb_pipeline = Pipeline(steps=[
     ('preprocessor', preprocessor),
     ('regressor', XGBRegressor(
@@ -147,14 +143,11 @@ xgb_pipeline = Pipeline(steps=[
     ))
 ])
 
-# Train on raw SalePrice
 print('Training XGBoost on SalePrice...')
 xgb_pipeline.fit(X_train, y_train_raw)
 
-# Predict
 y_pred_xgb = xgb_pipeline.predict(X_test)
 
-# Evaluate
 xgb_mae = mean_absolute_error(y_test_raw, y_pred_xgb)
 xgb_rmse = np.sqrt(mean_squared_error(y_test_raw, y_pred_xgb))
 xgb_r2 = r2_score(y_test_raw, y_pred_xgb)
@@ -164,5 +157,128 @@ print(f'MAE:  ${xgb_mae:>10,.0f}')
 print(f'RMSE: ${xgb_rmse:>10,.0f}')
 print(f'R²:   {xgb_r2:>10.4f}')
 
-# Store for comparison
 xgb_results = {'Model': 'XGBoost', 'MAE': xgb_mae, 'RMSE': xgb_rmse, 'R²': xgb_r2}
+
+
+comparison = pd.DataFrame([lr_results, rf_results, xgb_results])
+comparison = comparison.set_index('Model')[['MAE', 'RMSE', 'R²']]
+
+print('=== Model Comparison — Test Set ===')
+print(comparison.to_string())
+
+best_model_name = comparison['R²'].idxmax()
+best_mae = comparison.loc[best_model_name, 'MAE']
+best_rmse = comparison.loc[best_model_name, 'RMSE']
+best_r2 = comparison.loc[best_model_name, 'R²']
+
+print(f'\n=== Best Model: {best_model_name} ===')
+print(f'MAE:  ${best_mae:>10,.0f}')
+print(f'RMSE: ${best_rmse:>10,.0f}')
+print(f'R²:   {best_r2:>10.4f}')
+
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+colors = ['#3b82f6', '#4ade80', '#f59e0b']
+comparison['MAE'].plot(kind='bar', ax=axes[0], color=colors)
+axes[0].set_title('MAE (lower is better)')
+axes[0].set_ylabel('MAE ($)')
+axes[0].tick_params(axis='x', rotation=0)
+
+comparison['RMSE'].plot(kind='bar', ax=axes[1], color=colors)
+axes[1].set_title('RMSE (lower is better)')
+axes[1].set_ylabel('RMSE ($)')
+axes[1].tick_params(axis='x', rotation=0)
+
+comparison['R²'].plot(kind='bar', ax=axes[2], color=colors)
+axes[2].set_title('R² (higher is better)')
+axes[2].set_ylabel('R²')
+axes[2].set_ylim(0, 1)
+axes[2].tick_params(axis='x', rotation=0)
+
+for ax in axes:
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+
+plt.tight_layout()
+plt.show()
+
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+models_preds = [
+    ('Linear Regression', y_pred_lr),
+    ('Random Forest', y_pred_rf),
+    ('XGBoost', y_pred_xgb),
+]
+
+for ax, (name, preds) in zip(axes, models_preds):
+    ax.scatter(y_test_raw, preds, alpha=0.3, s=10, color='steelblue')
+    ax.plot([y_test_raw.min(), y_test_raw.max()],
+            [y_test_raw.min(), y_test_raw.max()],
+            'r--', alpha=0.7, linewidth=2, label='Perfect')
+    ax.set_title(f'{name}\nR² = {comparison.loc[name, "R²"]:.3f}')
+    ax.set_xlabel('Actual ($)')
+    ax.set_ylabel('Predicted ($)')
+    ax.legend()
+
+plt.tight_layout()
+plt.show()
+
+lr_pipeline_cv = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', LinearRegression())
+])
+
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+cv_r2_scores = cross_val_score(lr_pipeline_cv, X_train, y_train_log, cv=kf, scoring='r2')
+cv_mae_scores = cross_val_score(lr_pipeline_cv, X_train, y_train_log, cv=kf, scoring='neg_mean_absolute_error')
+
+print(f'CV R² scores per fold: {cv_r2_scores}')
+print(f'CV MAE scores per fold (log): {cv_mae_scores}')
+
+
+print(f'\nMean CV R²: {cv_r2_scores.mean():.4f} ± {cv_r2_scores.std():.4f}')
+print(f'Mean CV MAE (log): {cv_mae_scores.mean():.4f} ± {cv_mae_scores.std():.4f}')
+
+
+if best_model_name == 'Linear Regression':
+    best_pipeline = lr_pipeline
+elif best_model_name == 'Random Forest':
+    best_pipeline = rf_pipeline
+else:
+    best_pipeline = xgb_pipeline
+    
+    
+os.makedirs('models', exist_ok= True)
+
+pipeline_path = 'models/best_pipeline.pkl'
+joblib.dump(best_pipeline, pipeline_path)
+print(f'Saved pipeline → {pipeline_path}')
+
+
+model_path = 'models/best_model.pkl'
+joblib.dump(best_pipeline.named_steps['regressor'], model_path)
+print(f'Saved model → {model_path}')
+
+feature_names_path = 'models/feature_names.json'
+import json
+with open(feature_names_path, 'w') as f:
+    json.dump(list(X.columns), f, indent=2)
+print(f'Saved feature names → {feature_names_path}')
+
+target_info = {
+    'model_name': best_model_name,
+    'target': 'LogSalePrice' if best_model_name == 'Linear Regression' else 'SalePrice',
+    'test_mae': float(best_mae),
+    'test_rmse': float(best_rmse),
+    'test_r2': float(best_r2),
+}
+
+target_info_path = 'models/target_info.json'
+with open(target_info_path, 'w') as f:
+    json.dump(target_info, f, indent=2)
+print(f'Saved target info → {target_info_path}')
+
+print(f'\nBest model: {best_model_name}')
+print(f'Test MAE:  ${best_mae:,.0f}')
+print(f'Test RMSE: ${best_rmse:,.0f}')
+print(f'Test R²:   {best_r2:.4f}')

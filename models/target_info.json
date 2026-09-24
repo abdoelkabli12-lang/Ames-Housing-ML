@@ -1,0 +1,7 @@
+{
+  "model_name": "Linear Regression",
+  "target": "LogSalePrice",
+  "test_mae": 15717.340554743572,
+  "test_rmse": 21896.062348128195,
+  "test_r2": 0.9088290586386925
+}
