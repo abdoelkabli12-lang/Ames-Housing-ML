@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, ridge_regression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -158,6 +158,34 @@ print(f'RMSE: ${xgb_rmse:>10,.0f}')
 print(f'R²:   {xgb_r2:>10.4f}')
 
 xgb_results = {'Model': 'XGBoost', 'MAE': xgb_mae, 'RMSE': xgb_rmse, 'R²': xgb_r2}
+
+rf_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', ridge_regression(
+        n_estimators=200,
+        max_depth=15,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        random_state=42,
+        n_jobs=-1
+    ))
+])
+
+print('Training Random Forest on SalePrice...')
+rf_pipeline.fit(X_train, y_train_raw)
+
+y_pred_rf = rf_pipeline.predict(X_test)
+
+rf_mae = mean_absolute_error(y_test_raw, y_pred_rf)
+rf_rmse = np.sqrt(mean_squared_error(y_test_raw, y_pred_rf))
+rf_r2 = r2_score(y_test_raw, y_pred_rf)
+
+print('\n=== Random Forest — Test Set Results ===')
+print(f'MAE:  ${rf_mae:>10,.0f}')
+print(f'RMSE: ${rf_rmse:>10,.0f}')
+print(f'R²:   {rf_r2:>10.4f}')
+
+rf_results = {'Model': 'Random Forest', 'MAE': rf_mae, 'RMSE': rf_rmse, 'R²': rf_r2}
 
 
 comparison = pd.DataFrame([lr_results, rf_results, xgb_results])
