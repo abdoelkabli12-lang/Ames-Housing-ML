@@ -240,6 +240,59 @@ print(f'\nMean CV R²: {cv_r2_scores.mean():.4f} ± {cv_r2_scores.std():.4f}')
 print(f'Mean CV MAE (log): {cv_mae_scores.mean():.4f} ± {cv_mae_scores.std():.4f}')
 
 
+
+
+xgb_pipeline_cv = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', XGBRegressor(
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42,
+        n_jobs=-1,
+        verbosity=0
+    ))
+])
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+cv_r2_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='r2')
+cv_mae_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='neg_mean_absolute_error')
+
+print(f'CV R² scores per fold: {cv_r2_scores_xgb}')
+print(f'CV MAE scores per fold: {cv_mae_scores_xgb}')
+
+
+print(f'\nMean CV R²: {cv_r2_scores_xgb.mean():.4f} ± {cv_r2_scores_xgb.std():.4f}')
+print(f'Mean CV MAE (log): {cv_mae_scores_xgb.mean():.4f} ± {cv_mae_scores_xgb.std():.4f}')
+
+
+rf_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', RandomForestRegressor(
+        n_estimators=200,
+        max_depth=15,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        random_state=42,
+        n_jobs=-1
+    ))
+])
+
+
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+cv_r2_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='r2')
+cv_mae_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='neg_mean_absolute_error')
+
+print(f'CV R² scores per fold: {cv_r2_scores_xgb}')
+print(f'CV MAE scores per fold: {cv_mae_scores_xgb}')
+
+
+print(f'\nMean CV R²: {cv_r2_scores_xgb.mean():.4f} ± {cv_r2_scores_xgb.std():.4f}')
+print(f'Mean CV MAE (log): {cv_mae_scores_xgb.mean():.4f} ± {cv_mae_scores_xgb.std():.4f}')
+
 if best_model_name == 'Linear Regression':
     best_pipeline = lr_pipeline
 elif best_model_name == 'Random Forest':
@@ -282,3 +335,49 @@ print(f'\nBest model: {best_model_name}')
 print(f'Test MAE:  ${best_mae:,.0f}')
 print(f'Test RMSE: ${best_rmse:,.0f}')
 print(f'Test R²:   {best_r2:.4f}')
+
+if best_model_name == 'Linear Regression':
+    best_preds = y_pred_lr
+elif best_model_name == 'Random Forest':
+    best_preds = y_pred_rf
+else:
+    best_preds = y_pred_xgb
+
+errors = best_preds - y_test_raw.values
+abs_errors = np.abs(errors)
+pct_errors = abs_errors / y_test_raw.values * 100
+
+print(f'=== Error Analysis — Best Model: {best_model_name} ===')
+print(f'Mean Absolute Error:     ${abs_errors.mean():>10,.0f}')
+print(f'Median Absolute Error:   ${np.median(abs_errors):>10,.0f}')
+print(f'Max Absolute Error:      ${abs_errors.max():>10,.0f}')
+print(f'Mean Percentage Error:   {pct_errors.mean():>10.1f}%')
+print(f'Median Percentage Error: {np.median(pct_errors):>10.1f}%')
+
+error_df = pd.DataFrame({
+    'Actual': y_test_raw.values,
+    'Predicted': best_preds,
+    'Error': errors,
+    'AbsError': abs_errors,
+    'PctError': pct_errors,
+})
+
+bins = [0, 100000, 150000, 200000, 250000, 300000, 500000, 1000000]
+labels = ['<100K', '100-150K', '150-200K', '200-250K', '250-300K', '300-500K', '500K+']
+error_df['PriceBin'] = pd.cut(error_df['Actual'], bins=bins, labels=labels)
+
+print('\n=== Error by Price Range ===')
+error_by_bin = error_df.groupby('PriceBin').agg(
+    Count=('Actual', 'count'),
+    MAE=('AbsError', 'mean'),
+    MedianPctError=('PctError', 'median'),
+).round(1)
+print(error_by_bin.to_string())
+
+print('\n=== 10 Worst Predictions (largest absolute error) ===')
+worst = error_df.nlargest(10, 'AbsError')[['Actual', 'Predicted', 'Error', 'PctError']]
+print(worst.to_string())
+
+print('\n=== 10 Best Predictions (lowest absolute error) ===')
+best_preds_df = error_df.nsmallest(10, 'AbsError')[['Actual', 'Predicted', 'Error', 'PctError']]
+print(best_preds_df.to_string())
