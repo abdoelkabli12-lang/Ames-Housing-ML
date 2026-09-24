@@ -8,6 +8,9 @@ from preprocess import CleanData as cl
 
 # ── Section 3: Target Analysis ──────────────────────────────────────────────
 
+def render_log(df, log_col, target):
+    df[log_col] = np.log1p(df[target])
+
 def analyze_target(df, target='SalePrice'):
     if target not in df.columns:
         print(f"Column '{target}' not found in DataFrame.")
@@ -31,7 +34,8 @@ def analyze_target(df, target='SalePrice'):
 
     # Log transform
     log_col = f'Log{target}'
-    df[log_col] = np.log1p(df[target])
+    render_log(df, log_col, target)
+    
 
     # Log distribution
     plt.figure(figsize=(10, 6))
@@ -280,6 +284,8 @@ def final_data_check(df):
 
     return df.shape, len(missing), df.columns.tolist()
 
+def render_df(df):
+    return df
 
 x = cl().clean()
 

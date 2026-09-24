@@ -1,7 +1,0 @@
-{
-  "model_name": "XGBoost",
-  "target": "SalePrice",
-  "test_mae": 10408.781545952575,
-  "test_rmse": 19432.111687925873,
-  "test_r2": 0.8987216230705284
-}
