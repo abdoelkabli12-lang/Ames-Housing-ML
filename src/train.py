@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.linear_model import LinearRegression, ridge_regression
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -159,37 +159,36 @@ print(f'R²:   {xgb_r2:>10.4f}')
 
 xgb_results = {'Model': 'XGBoost', 'MAE': xgb_mae, 'RMSE': xgb_rmse, 'R²': xgb_r2}
 
-rf_pipeline = Pipeline(steps=[
+print('\n')
+
+rg_pipeline = Pipeline(steps=[
     ('preprocessor', preprocessor),
-    ('regressor', ridge_regression(
-        n_estimators=200,
-        max_depth=15,
-        min_samples_split=5,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=-1
+    ('regressor', Ridge(
+        alpha=1.0
     ))
 ])
 
-print('Training Random Forest on SalePrice...')
-rf_pipeline.fit(X_train, y_train_raw)
+print('Training Ridge Regression on LogSalePrice...')
+rg_pipeline.fit(X_train, y_train_log)
 
-y_pred_rf = rf_pipeline.predict(X_test)
+y_pred_rg = rg_pipeline.predict(X_test)
 
-rf_mae = mean_absolute_error(y_test_raw, y_pred_rf)
-rf_rmse = np.sqrt(mean_squared_error(y_test_raw, y_pred_rf))
-rf_r2 = r2_score(y_test_raw, y_pred_rf)
+rg_mae = mean_absolute_error(y_test_raw, y_pred_rg)
+rg_rmse = np.sqrt(mean_squared_error(y_test_raw, y_pred_rg))
+rg_r2 = r2_score(y_test_raw, y_pred_rg)
 
-print('\n=== Random Forest — Test Set Results ===')
-print(f'MAE:  ${rf_mae:>10,.0f}')
-print(f'RMSE: ${rf_rmse:>10,.0f}')
-print(f'R²:   {rf_r2:>10.4f}')
+print('\n=== Ridge Regression — Test Set Results ===')
+print(f'MAE:  ${rg_mae:>10,.0f}')
+print(f'RMSE: ${rg_rmse:>10,.0f}')
+print(f'R²:   {rg_r2:>10.4f}')
 
-rf_results = {'Model': 'Random Forest', 'MAE': rf_mae, 'RMSE': rf_rmse, 'R²': rf_r2}
+rg_results = {'Model': 'Ridge Regression', 'MAE': rg_mae, 'RMSE': rg_rmse, 'R²': rg_r2}
 
 
-comparison = pd.DataFrame([lr_results, rf_results, xgb_results])
+comparison = pd.DataFrame([lr_results, rf_results, xgb_results, rg_results])
 comparison = comparison.set_index('Model')[['MAE', 'RMSE', 'R²']]
+
+print('\n')
 
 print('=== Model Comparison — Test Set ===')
 print(comparison.to_string())
@@ -198,6 +197,15 @@ best_model_name = comparison['R²'].idxmax()
 best_mae = comparison.loc[best_model_name, 'MAE']
 best_rmse = comparison.loc[best_model_name, 'RMSE']
 best_r2 = comparison.loc[best_model_name, 'R²']
+
+if best_model_name == 'Linear Regression':
+    best_pipeline = lr_pipeline
+elif best_model_name == 'Random Forest':
+    best_pipeline = rf_pipeline
+elif best_model_name == 'Ridge Regression':
+    best_pipeline = rg_pipeline
+else:
+    best_pipeline = xgb_pipeline
 
 print(f'\n=== Best Model: {best_model_name} ===')
 print(f'MAE:  ${best_mae:>10,.0f}')
@@ -242,7 +250,7 @@ for ax, (name, preds) in zip(axes, models_preds):
     ax.plot([y_test_raw.min(), y_test_raw.max()],
             [y_test_raw.min(), y_test_raw.max()],
             'r--', alpha=0.7, linewidth=2, label='Perfect')
-    ax.set_title(f'{name}\nR² = {comparison.loc[name, "R²"]:.3f}')
+    ax.set_title(f'{name}\nR² = {comparison.at[name, "R²"]:.3f}')
     ax.set_xlabel('Actual ($)')
     ax.set_ylabel('Predicted ($)')
     ax.legend()
@@ -288,48 +296,13 @@ kf = KFold(n_splits=5, shuffle=True, random_state=42)
 cv_r2_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='r2')
 cv_mae_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='neg_mean_absolute_error')
 
-print(f'CV R² scores per fold: {cv_r2_scores_xgb}')
-print(f'CV MAE scores per fold: {cv_mae_scores_xgb}')
+print(f'XGBoost CV R² scores per fold: {cv_r2_scores_xgb}')
+print(f'XGBoost CV MAE scores per fold: {cv_mae_scores_xgb}')
 
 
 print(f'\nMean CV R²: {cv_r2_scores_xgb.mean():.4f} ± {cv_r2_scores_xgb.std():.4f}')
-print(f'Mean CV MAE (log): {cv_mae_scores_xgb.mean():.4f} ± {cv_mae_scores_xgb.std():.4f}')
+print(f'Mean CV MAE: {cv_mae_scores_xgb.mean():.4f} ± {cv_mae_scores_xgb.std():.4f}')
 
-
-rf_pipeline = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('regressor', RandomForestRegressor(
-        n_estimators=200,
-        max_depth=15,
-        min_samples_split=5,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=-1
-    ))
-])
-
-
-kf = KFold(n_splits=5, shuffle=True, random_state=42)
-
-cv_r2_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='r2')
-cv_mae_scores_xgb = cross_val_score(xgb_pipeline_cv, X_train, y_train_raw, cv=kf, scoring='neg_mean_absolute_error')
-
-print(f'CV R² scores per fold: {cv_r2_scores_xgb}')
-print(f'CV MAE scores per fold: {cv_mae_scores_xgb}')
-
-
-print(f'\nMean CV R²: {cv_r2_scores_xgb.mean():.4f} ± {cv_r2_scores_xgb.std():.4f}')
-print(f'Mean CV MAE (log): {cv_mae_scores_xgb.mean():.4f} ± {cv_mae_scores_xgb.std():.4f}')
-
-if best_model_name == 'Linear Regression':
-    best_pipeline = lr_pipeline
-elif best_model_name == 'Random Forest':
-    best_pipeline = rf_pipeline
-else:
-    best_pipeline = xgb_pipeline
-    
-    
-os.makedirs('models', exist_ok= True)
 
 pipeline_path = 'models/best_pipeline.pkl'
 joblib.dump(best_pipeline, pipeline_path)
@@ -368,6 +341,8 @@ if best_model_name == 'Linear Regression':
     best_preds = y_pred_lr
 elif best_model_name == 'Random Forest':
     best_preds = y_pred_rf
+elif best_model_name == 'Ridge Regression':
+    best_preds = y_pred_rg
 else:
     best_preds = y_pred_xgb
 

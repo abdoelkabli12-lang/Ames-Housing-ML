@@ -78,11 +78,9 @@ def analyze_correlations(df, target='SalePrice', top_n=20, plot=True):
     print(f"\nTop {top_n} negative correlations:")
     print(corr.tail(top_n).to_string())
 
-    # Weak correlation count
     weak = (corr.abs() < 0.1) & (corr.index != target)
     print(f"\nFeatures with |correlation| < 0.1: {weak.sum()} (likely not individually predictive)")
 
-    # Bar chart
     if plot:
         plot_cols = corr.head(top_n + 1).drop(target, errors='ignore')
         plt.figure(figsize=(10, 8))
